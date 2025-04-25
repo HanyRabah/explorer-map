@@ -1,42 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-
-const prisma = new PrismaClient();
-
-async function main() {
-  console.log('Starting database seeding...');
-
-  // Check if cities already exist to prevent duplicate seeding
-  const existingCities = await prisma.city.findMany({
-    select: { name: true }
-  });
-
-  if (existingCities.length > 0) {
-    console.log(`Database already contains ${existingCities.length} cities. Skipping seed.`);
-    return;
-  }
-
-  try {
-    // In a real implementation, you would want to have a pre-downloaded
-    // GeoJSON file containing Egypt's administrative boundaries
-    // For this example, we'll simulate having this file
-    
-    // Path to the GeoJSON file with Egypt boundaries
-    // This could be downloaded once from Mapbox or another source
-    const egptBoundariesPath = path.join(process.cwd(), 'public', 'data', 'egypt-boundaries.json');
-    
-    // Check if the file exists, if not we'll use hardcoded data
-    let boundariesData;
-    if (fs.existsSync(egptBoundariesPath)) {
-      const fileContent = fs.readFileSync(egptBoundariesPath, 'utf8');
-      boundariesData = JSON.parse(fileContent);
-    } else {
-      // If file doesn't exist, use simplified hardcoded data for demo purposes
-      // In a real app, you would download this data from Mapbox or another source
-      boundariesData = {
-        type: 'FeatureCollection',
-         "features": [
+{
+  "type": "FeatureCollection",
+    "features": [
     {
       "id": "1",
       "properties": {
@@ -8936,7 +8900,7 @@ async function main() {
     {
       "id": "4",
       "properties": {
-        "name": "AlFayyum",
+        "name": "Faiyum",
         "name_ar": "الفيوم"
       },
       "geometry": {
@@ -10696,7 +10660,7 @@ async function main() {
     {
       "id": "8",
       "properties": {
-        "name": "Al Giza",
+        "name": "Giza",
         "name_ar": "الجيزة"
       },
       "geometry": {
@@ -26922,73 +26886,4 @@ async function main() {
       }
     }
   ]
-      };
-    }
-
-    console.log(`Seeding ${boundariesData.features.length} cities...`);
-    
-    // Insert cities from boundary data
-    for (const feature of boundariesData.features) {
-      const city = await prisma.city.create({
-        data: {
-          name: feature.properties.name,
-          nameArabic: feature.properties.name_ar,
-          geometry: feature.geometry
-        }
-      });
-      console.log(`Created city: ${city.name} (${city.id})`);
-      
-      // Create some sample notes for a few cities
-      if (city.name === 'Cairo') {
-        await prisma.note.createMany({
-          data: [
-            {
-              title: 'Best Museums',
-              content: 'The Egyptian Museum and the Grand Egyptian Museum are must-visit attractions in Cairo.',
-              cityId: city.id
-            },
-            {
-              title: 'Transportation Tips',
-              content: 'Cairo Metro is the fastest way to navigate the city and avoid traffic congestion.',
-              cityId: city.id
-            }
-          ]
-        });
-      } else if (city.name === 'Alexandria') {
-        await prisma.note.createMany({
-          data: [
-            {
-              title: 'Beaches',
-              content: 'Montazah Beach and Maamoura Beach are some of the nicest beaches in Alexandria.',
-              cityId: city.id
-            }
-          ]
-        });
-      } else if (city.name === 'Luxor') {
-        await prisma.note.createMany({
-          data: [
-            {
-              title: 'Best Time to Visit',
-              content: 'October to April is the best time to visit Luxor, as the temperatures are cooler.',
-              cityId: city.id
-            }
-          ]
-        });
-      }
-    }
-
-    console.log('Seeding completed successfully!');
-  } catch (error) {
-    console.error('Error during seeding:', error);
-    throw error;
-  }
 }
-
-main()
-  .catch((e) => {
-    console.error('Error during seeding:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });

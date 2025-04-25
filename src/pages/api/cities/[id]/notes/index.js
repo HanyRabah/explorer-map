@@ -1,3 +1,4 @@
+// pages/api/cities/[id]/notes/index.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -58,7 +59,23 @@ export default async function handler(req, res) {
           },
         });
 
-        res.status(201).json(note);
+        // Update the city's note count in the response
+        const updatedCity = await prisma.city.findUnique({
+          where: { id: cityId },
+          include: {
+            _count: {
+              select: { notes: true },
+            },
+          },
+        });
+
+        res.status(201).json({
+          ...note,
+          city: {
+            id: updatedCity.id,
+            notes: updatedCity._count.notes
+          }
+        });
       } catch (error) {
         console.error('Error creating note:', error);
         res.status(500).json({ message: 'Failed to create note' });

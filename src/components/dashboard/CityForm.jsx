@@ -1,32 +1,32 @@
 import {
-    Add as AddIcon,
-    ArrowBack as ArrowBackIcon,
-    Delete as DeleteIcon,
-    Edit as EditIcon,
-    Save as SaveIcon
+  Add as AddIcon,
+  ArrowBack as ArrowBackIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Grid,
-    IconButton,
-    Paper,
-    Tab,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Tabs,
-    TextField,
-    Typography
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  Paper,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  TextField,
+  Typography
 } from '@mui/material';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
@@ -304,7 +304,7 @@ const CityForm = ({ cityId }) => {
                 dir="rtl"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            {/* <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
                 label="Population"
@@ -326,8 +326,8 @@ const CityForm = ({ cityId }) => {
                 type="number"
                 inputProps={{ step: 0.01 }}
               />
-            </Grid>
-            <Grid item xs={12}>
+            </Grid> */}
+            {/* <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Description"
@@ -338,7 +338,7 @@ const CityForm = ({ cityId }) => {
                 multiline
                 rows={4}
               />
-            </Grid>
+            </Grid> */}
             <Grid item xs={12}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Geometry: {formData.geometry ? 'Loaded' : 'Not set'}
@@ -455,3 +455,5 @@ const CityForm = ({ cityId }) => {
     </Box>
   );
 };
+
+export default CityForm;

@@ -12,16 +12,6 @@ const CityPopup = ({ city }) => {
           {city.nameArabic}
         </Typography>
       )}
-      {city.population && (
-        <Typography variant="body2">
-          Population: {city.population.toLocaleString()}
-        </Typography>
-      )}
-      {city.area && (
-        <Typography variant="body2">
-          Area: {city.area.toLocaleString()} km²
-        </Typography>
-      )}
       {city.notes && city.notes.length > 0 && (
         <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
           Click for more details

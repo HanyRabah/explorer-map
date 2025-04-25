@@ -14,13 +14,10 @@ model City {
   id          String   @id @default(cuid())
   name        String
   nameArabic  String?
-  population  Int?
-  area        Float?
-  description String?  @db.Text
+  // Store the GeoJSON geometry directly in the database
+  geometry    Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  // Store GeoJSON as a JSON field
-  geometry    Json
   // City can have multiple notes
   notes       Note[]
 }
