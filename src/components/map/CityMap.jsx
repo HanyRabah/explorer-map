@@ -147,44 +147,37 @@ const CityMap = ({ onCitySelect }) => {
 
   // Handle mouse enter on a feature
   const onMouseEnter = useCallback(event => {
-    if (!event.features || event.features.length === 0 || !mapLoaded) return;
-    
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    
-    map.getCanvas().style.cursor = 'pointer';
-    
-    // Get the feature ID safely
-    const feature = event.features[0];
+  if (!event.features || event.features.length === 0 || !mapLoaded) return;
+  
+  const map = mapRef.current?.getMap();
+  if (!map) return;
+  
+  map.getCanvas().style.cursor = 'pointer';
+  
+  // Get the feature ID safely
+  const feature = event.features[0];
 
-    // Use numeric ID for feature state
-    const hoveredId = feature.id || feature.properties.id;
-    
-    // Skip if no valid ID found
-    if (isNaN(hoveredId)) {
-      console.warn('No valid feature ID found for hover state');
-      return;
-    }
-
-      if (hoveredId === undefined || hoveredId === null) {
+  // Use numeric ID for feature state
+  const hoveredId = feature.id || feature.properties.id;
+  
+  // Skip if no valid ID found
+  if (hoveredId === undefined || hoveredId === null || isNaN(hoveredId)) {
     console.warn('No valid feature ID found for hover state');
     return;
   }
-    
-   // If hovering the same feature, just update popup position
-  if (hoveredIdRef.current === hoveredId && popupInfo) {
-    // Use cursor position instead of centroid for smoother tracking
-    // This is optional - remove if you prefer centroid positioning
-    setPopupInfo(prev => ({
-      ...prev,
-      longitude: event.lngLat.lng,
-      latitude: event.lngLat.lat
-    }));
+  
+  // Find the city data for the popup
+  const cityId = feature.properties.originalId;
+  const city = cities.find(c => c.id === cityId);
+  
+  if (!city) {
+    console.warn('City not found for ID:', cityId);
     return;
   }
   
+  // Always update hover state and popup, even when hovering over a different feature
   // Remove hover state from previous feature
-  if (hoveredIdRef.current !== null) {
+  if (hoveredIdRef.current !== null && hoveredIdRef.current !== hoveredId) {
     try {
       map.setFeatureState(
         { source: 'egypt-cities-source', id: hoveredIdRef.current },
@@ -194,35 +187,30 @@ const CityMap = ({ onCitySelect }) => {
       console.warn('Error clearing previous hover state:', err);
     }
   }
+  
+  // Set hover state on current feature
+  try {
+    map.setFeatureState(
+      { source: 'egypt-cities-source', id: hoveredId },
+      { hover: true }
+    );
     
-    // Set hover state on current feature
-    try {
-      map.setFeatureState(
-        { source: 'egypt-cities-source', id: hoveredId },
-        { hover: true }
-      );
-      
-      hoveredIdRef.current = hoveredId;
-      
-      // Find the city data for the popup
-      const cityId = feature.properties.originalId;
-      const city = cities.find(c => c.id === cityId);
-      
-      if (city) {
-        // Calculate better position for popup using centroid
-        const centroid = calculateCentroid(city.geometry);
-        
-        setPopupInfo({
-          ...centroid,
-          city
-        });
-      }
-      console.log('Setting popup info:', popupInfo);
-
-    } catch (err) {
-      console.error('Error setting hover state:', err);
-    }
-  }, [cities, calculateCentroid, mapLoaded]);
+    hoveredIdRef.current = hoveredId;
+    
+    // Always update popup info with the current hovered city
+    // Calculate better position for popup using centroid
+    const centroid = calculateCentroid(city.geometry);
+    
+    setPopupInfo({
+      longitude: event.lngLat.lng, // Use cursor position for smoother following
+      latitude: event.lngLat.lat,
+      city
+    });
+    
+  } catch (err) {
+    console.error('Error setting hover state:', err);
+  }
+}, [cities, calculateCentroid, mapLoaded]);
 
   // Handle mouse leave from a feature
   const onMouseLeave = useCallback(() => {
@@ -305,8 +293,8 @@ const CityMap = ({ onCitySelect }) => {
         onMove={evt => setViewState(evt.viewState)}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_AT}
         interactiveLayerIds={['egypt-cities']}
-        onMouseEnter={onMouseEnter}
-        onMouseMove={onMouseMove}
+        onMouseMove={onMouseEnter}
+        // onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
         onLoad={onMapLoad}

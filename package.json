@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
     "fetch-boundaries": "node scripts/fetch-boundaries.js",
-    "setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed"
+    "setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
