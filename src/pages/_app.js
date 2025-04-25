@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import '../styles/globals.css';
+import '../styles/mapStyles.css';
 
 // Create a custom theme with Egyptian-inspired colors
 const theme = createTheme({
@@ -76,7 +77,7 @@ function MyApp({ Component, pageProps }) {
     <>
       <Head>
         <meta name="viewport" content="initial-scale=1, width=device-width" />
-        <title>Egypt City Explorer</title>
+        <title>Egypt Map Explorer</title>
       </Head>
       <ThemeProvider theme={theme}>
         <CssBaseline />

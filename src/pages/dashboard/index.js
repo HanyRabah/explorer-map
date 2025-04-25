@@ -198,7 +198,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Admin Dashboard - Egypt City Explorer</title>
+        <title>Admin Dashboard - Egypt Map Explorer</title>
       </Head>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

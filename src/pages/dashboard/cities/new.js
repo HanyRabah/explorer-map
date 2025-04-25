@@ -14,7 +14,7 @@ export default function NewCity() {
   return (
     <>
       <Head>
-        <title>Add New City - Egypt City Explorer</title>
+        <title>Add New City - Egypt Map Explorer</title>
       </Head>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

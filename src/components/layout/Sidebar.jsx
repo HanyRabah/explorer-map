@@ -1,6 +1,7 @@
 import {
   Add as AddIcon,
   Close as CloseIcon,
+  Delete as DeleteIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   LocationCity as LocationIcon,
@@ -21,10 +22,12 @@ import {
   IconButton,
   List,
   ListItem,
+  ListItemSecondaryAction,
   ListItemText,
   Paper,
   Snackbar,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
@@ -40,6 +43,21 @@ const Sidebar = ({ open, city, onClose }) => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   
+  // For deleting notes
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState(null);
+  
+  // Reset internal state when city changes
+  useEffect(() => {
+    if (city) {
+      setNotes([]);
+      setExpandedNote(null);
+    }
+  }, [city]);
+  
+  // Fetch notes when city or open state changes
   useEffect(() => {
     if (city && open) {
       fetchCityNotes();
@@ -112,7 +130,7 @@ const Sidebar = ({ open, city, onClose }) => {
       }
       
       const savedNote = await response.json();
-      setNotes([...notes, savedNote]);
+      setNotes(prevNotes => [...prevNotes, savedNote]);
       closeNoteDialog();
       setSnackbar({
         open: true,
@@ -131,6 +149,63 @@ const Sidebar = ({ open, city, onClose }) => {
     }
   };
 
+  // Open delete confirmation dialog
+  const openDeleteConfirm = (note, event) => {
+    // Stop the click event from propagating to the parent ListItem
+    event.stopPropagation();
+    setNoteToDelete(note);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Close delete confirmation dialog
+  const closeDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+    setNoteToDelete(null);
+  };
+
+  // Delete the note
+  const deleteNote = async () => {
+    if (!noteToDelete) return;
+    
+    setDeleteLoading(true);
+    setDeletingNoteId(noteToDelete.id);
+    
+    try {
+      const response = await fetch(`/api/cities/${city.id}/notes/${noteToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete note: ${response.status}`);
+      }
+      
+      // Remove the note from state
+      setNotes(prevNotes => prevNotes.filter(note => note.id !== noteToDelete.id));
+      
+      // If the deleted note was expanded, collapse it
+      if (expandedNote === noteToDelete.id) {
+        setExpandedNote(null);
+      }
+      
+      setSnackbar({
+        open: true,
+        message: 'Note deleted successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete note. Please try again.',
+        severity: 'error'
+      });
+    } finally {
+      setDeleteLoading(false);
+      setDeletingNoteId(null);
+      closeDeleteConfirm();
+    }
+  };
+
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') {
       return;
@@ -138,6 +213,7 @@ const Sidebar = ({ open, city, onClose }) => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  // Render nothing if no city is selected
   if (!city) return null;
 
   return (
@@ -194,16 +270,37 @@ const Sidebar = ({ open, city, onClose }) => {
                     button 
                     onClick={() => handleNoteClick(note.id)}
                     sx={{ px: 2, py: 1 }}
+                    disabled={deletingNoteId === note.id}
                   >
                     <ListItemText 
                       primary={note.title} 
                       secondary={new Date(note.createdAt).toLocaleDateString()}
                     />
-                    {expandedNote === note.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    <ListItemSecondaryAction>
+                      <Tooltip title="Delete note">
+                        <IconButton 
+                          edge="end" 
+                          aria-label="delete"
+                          onClick={(e) => openDeleteConfirm(note, e)}
+                          disabled={deletingNoteId === note.id}
+                          size="small"
+                          sx={{ mr: 1 }}
+                        >
+                          {deletingNoteId === note.id ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <DeleteIcon fontSize="small" color="error" />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                      {expandedNote === note.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </ListItemSecondaryAction>
                   </ListItem>
                   <Collapse in={expandedNote === note.id} timeout="auto" unmountOnExit>
                     <Box sx={{ p: 2, pt: 0 }}>
-                      <Typography variant="body1">{note.content}</Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {note.content}
+                      </Typography>
                     </Box>
                   </Collapse>
                 </Paper>
@@ -238,7 +335,7 @@ const Sidebar = ({ open, city, onClose }) => {
       {/* Add Note Dialog */}
       <Dialog 
         open={noteDialogOpen} 
-        onClose={closeNoteDialog} 
+        onClose={!saveLoading ? closeNoteDialog : undefined} 
         maxWidth="sm" 
         fullWidth
       >
@@ -255,6 +352,7 @@ const Sidebar = ({ open, city, onClose }) => {
             onChange={handleNoteInputChange}
             sx={{ mb: 2 }}
             required
+            disabled={saveLoading}
           />
           <TextField
             margin="dense"
@@ -267,6 +365,7 @@ const Sidebar = ({ open, city, onClose }) => {
             value={newNote.content}
             onChange={handleNoteInputChange}
             required
+            disabled={saveLoading}
           />
         </DialogContent>
         <DialogActions>
@@ -277,6 +376,35 @@ const Sidebar = ({ open, city, onClose }) => {
             disabled={saveLoading || !newNote.title || !newNote.content}
           >
             {saveLoading ? <CircularProgress size={24} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={!deleteLoading ? closeDeleteConfirm : undefined}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Note</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete the note "{noteToDelete?.title}"? 
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteConfirm} disabled={deleteLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={deleteNote} 
+            color="error" 
+            variant="contained"
+            disabled={deleteLoading}
+          >
+            {deleteLoading ? <CircularProgress size={24} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

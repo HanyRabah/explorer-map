@@ -1,7 +1,7 @@
 // mapbox-config.js
 // This file contains configuration for Mapbox
 
-export const MAPBOX_STYLE = 'mapbox://styles/mapbox/light-v11';
+export const MAPBOX_STYLE = 'mapbox://styles/mapbox/streets-v12';
 
 // Egypt bounds (for map constraints)
 export const EGYPT_BOUNDS = [

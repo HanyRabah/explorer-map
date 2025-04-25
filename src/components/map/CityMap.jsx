@@ -1,7 +1,7 @@
-import { Badge, Box, CircularProgress, Typography } from '@mui/material';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { Box, CircularProgress, Typography } from '@mui/material';
+import 'mapbox-gl/dist/mapbox-gl.css'; // Make sure this is imported
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Map, { Layer, Popup, Source } from 'react-map-gl';
+import Map, { FullscreenControl, Layer, NavigationControl, Popup, Source } from 'react-map-gl';
 import { MAPBOX_STYLE } from '../../utils/mapbox-config';
 
 // Layer styles for different states
@@ -58,9 +58,9 @@ const CityMap = ({ onCitySelect }) => {
   
   const [cities, setCities] = useState([]);
   const [geoJsonData, setGeoJsonData] = useState(null);
-  const [hoveredCityId, setHoveredCityId] = useState(null);
   const [popupInfo, setPopupInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
   
   // Keep track of hover state for feature states
   const hoveredIdRef = useRef(null);
@@ -115,16 +115,16 @@ const CityMap = ({ onCitySelect }) => {
         // Convert to GeoJSON format
         const geojson = {
           type: 'FeatureCollection',
-          features: data.map(city => ({
+          features: data.map((city, index) => ({
             type: 'Feature',
-            id: city.id,
+            id: index + 1, // Use sequential numbers starting from 1
             properties: {
-              id: city.id,
+              originalId: city.id, // Store original ID here
+              id: index + 1, // Store numeric ID here too
               name: city.name,
               nameArabic: city.nameArabic,
-              notes: city.notes || 0
+              notesCount: city.notes || 0
             },
-            // Use the geometry directly from the database
             geometry: city.geometry
           }))
         };
@@ -140,65 +140,145 @@ const CityMap = ({ onCitySelect }) => {
     fetchCities();
   }, []);
 
+  // Handle map load event
+  const onMapLoad = useCallback(() => {
+    setMapLoaded(true);
+  }, []);
+
   // Handle mouse enter on a feature
-  const onMouseEnter = useCallback((event) => {
-    if (event.features && event.features.length > 0) {
-      const map = mapRef.current.getMap();
-      
-      // Remove hover state from previous feature
-      if (hoveredIdRef.current) {
-        map.setFeatureState(
-          { source: 'egypt-cities-source', id: hoveredIdRef.current },
-          { hover: false }
-        );
-      }
-      
-      // Set hover state on current feature
-      const hoveredId = event.features[0].id;
+  const onMouseEnter = useCallback(event => {
+    if (!event.features || event.features.length === 0 || !mapLoaded) return;
+    
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    
+    map.getCanvas().style.cursor = 'pointer';
+    
+    // Get the feature ID safely
+    const feature = event.features[0];
+
+    // Use numeric ID for feature state
+    const hoveredId = feature.id || feature.properties.id;
+    
+    // Skip if no valid ID found
+    if (isNaN(hoveredId)) {
+      console.warn('No valid feature ID found for hover state');
+      return;
+    }
+
+      if (hoveredId === undefined || hoveredId === null) {
+    console.warn('No valid feature ID found for hover state');
+    return;
+  }
+    
+   // If hovering the same feature, just update popup position
+  if (hoveredIdRef.current === hoveredId && popupInfo) {
+    // Use cursor position instead of centroid for smoother tracking
+    // This is optional - remove if you prefer centroid positioning
+    setPopupInfo(prev => ({
+      ...prev,
+      longitude: event.lngLat.lng,
+      latitude: event.lngLat.lat
+    }));
+    return;
+  }
+  
+  // Remove hover state from previous feature
+  if (hoveredIdRef.current !== null) {
+    try {
+      map.setFeatureState(
+        { source: 'egypt-cities-source', id: hoveredIdRef.current },
+        { hover: false }
+      );
+    } catch (err) {
+      console.warn('Error clearing previous hover state:', err);
+    }
+  }
+    
+    // Set hover state on current feature
+    try {
       map.setFeatureState(
         { source: 'egypt-cities-source', id: hoveredId },
         { hover: true }
       );
       
       hoveredIdRef.current = hoveredId;
-      setHoveredCityId(hoveredId);
       
       // Find the city data for the popup
-      const city = cities.find(c => c.id === hoveredId);
+      const cityId = feature.properties.originalId;
+      const city = cities.find(c => c.id === cityId);
+      
       if (city) {
         // Calculate better position for popup using centroid
         const centroid = calculateCentroid(city.geometry);
         
         setPopupInfo({
-          ...centroid, // Use centroid for better positioning
+          ...centroid,
           city
         });
       }
+      console.log('Setting popup info:', popupInfo);
+
+    } catch (err) {
+      console.error('Error setting hover state:', err);
     }
-  }, [cities, calculateCentroid]);
+  }, [cities, calculateCentroid, mapLoaded]);
 
   // Handle mouse leave from a feature
   const onMouseLeave = useCallback(() => {
-    if (hoveredIdRef.current) {
-      const map = mapRef.current.getMap();
-      map.setFeatureState(
-        { source: 'egypt-cities-source', id: hoveredIdRef.current },
-        { hover: false }
-      );
+    if (!mapLoaded) return;
+    
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    
+    map.getCanvas().style.cursor = '';
+    
+    if (hoveredIdRef.current !== null) {
+      try {
+        map.setFeatureState(
+          { source: 'egypt-cities-source', id: hoveredIdRef.current },
+          { hover: false }
+        );
+      } catch (err) {
+        console.warn('Error clearing hover state on leave:', err);
+      }
       hoveredIdRef.current = null;
-      setHoveredCityId(null);
       setPopupInfo(null);
     }
-  }, []);
+  }, [mapLoaded]);
 
+  const onMouseMove = useCallback(event => {
+  // Only handle if we already have a hovered feature
+  if (!hoveredIdRef.current || !mapLoaded) return;
+  
+  // Update popup position to follow cursor if desired
+  if (popupInfo) {
+    setPopupInfo(prev => ({
+      ...prev,
+      longitude: event.lngLat.lng,
+      latitude: event.lngLat.lat
+    }));
+  }
+}, [mapLoaded, popupInfo]);
   // Handle click on a feature
-  const onClick = useCallback((event) => {
-    if (event.features && event.features.length > 0) {
-      const clickedId = event.features[0].id;
-      const city = cities.find(c => c.id === clickedId);
-      if (city && onCitySelect) {
-        onCitySelect(city);
-      }
+  const onClick = useCallback(event => {
+    if (!event.features || event.features.length === 0) return;
+    
+    const feature = event.features[0];
+    const clickedId = feature.properties.originalId;
+    
+    // Skip if no valid ID found
+    if (clickedId === undefined || clickedId === null) {
+      console.warn('No valid feature ID found for click action');
+      return;
+    }
+    
+    const city = cities.find(c => c.id === clickedId);
+    
+    if (city && onCitySelect) {
+      // Close popup when clicking to prevent UI clutter
+      setPopupInfo(null);
+      onCitySelect(city);
     }
   }, [cities, onCitySelect]);
 
@@ -225,26 +305,50 @@ const CityMap = ({ onCitySelect }) => {
         onMove={evt => setViewState(evt.viewState)}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
         interactiveLayerIds={['egypt-cities']}
-        onMouseMove={onMouseEnter}
+        onMouseEnter={onMouseEnter}
+        onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
+        onLoad={onMapLoad}
       >
+        <NavigationControl position="bottom-left" showCompass={false} />
+        <FullscreenControl position="bottom-left" />
+        
         {geoJsonData && (
-          <Source id="egypt-cities-source" type="geojson" data={geoJsonData}>
+          <Source 
+            id="egypt-cities-source" 
+            type="geojson" 
+            data={geoJsonData}
+            generateId={false} // We're providing explicit IDs
+          >
             <Layer {...layerStyle} />
             <Layer {...outlineLayerStyle} />
           </Source>
         )}
-        
+        {mapLoaded && (
+          <Layer
+            id="city-labels"
+            type="symbol"
+            source="egypt-cities-source"
+            layout={{
+              'text-field': ['get', 'name'],
+              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Regular'],
+              'text-size': 12,
+              'text-anchor': 'center',
+              'text-offset': [0, 0.6]
+            }}
+          />
+        )}
         {popupInfo && (
           <Popup
-            longitude={popupInfo.longitude}
-            latitude={popupInfo.latitude}
-            anchor="bottom"
-            onClose={() => setPopupInfo(null)}
-            closeButton={false}
-            closeOnClick={false}
-            className="city-popup"
+              longitude={popupInfo.longitude}
+              latitude={popupInfo.latitude}
+              anchor="bottom"
+              onClose={() => setPopupInfo(null)}
+              closeButton={false}
+              closeOnClick={false}
+              className="city-popup"
+              style={{ zIndex: 10 }}
           >
             <Box sx={{ p: 1, maxWidth: 200 }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
@@ -255,18 +359,9 @@ const CityMap = ({ onCitySelect }) => {
                   {popupInfo.city.nameArabic}
                 </Typography>
               )}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                  Click for more details
-                </Typography>
-                <Badge 
-                  badgeContent={popupInfo.city.notes} 
-                  color="primary"
-                  sx={{ ml: 1 }}
-                >
-                  <Typography variant="caption">Notes</Typography>
-                </Badge>
-              </Box>
+              <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                number of notes: {popupInfo.city.notes || 0}
+              </Typography>
             </Box>
           </Popup>
         )}

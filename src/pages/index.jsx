@@ -83,7 +83,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Egypt City Explorer</title>
+        <title>Egypt Map Explorer</title>
         <meta name="description" content="Explore cities in Egypt with interactive map" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -92,7 +92,7 @@ export default function Home() {
         <AppBar position="absolute" color="default" elevation={0} sx={{ zIndex: (theme) => theme.zIndex.drawer - 1 }}>
           <Toolbar>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Egypt City Explorer
+              Egypt Map Explorer
             </Typography>
             {/* <Button 
               color="primary" 
@@ -125,8 +125,7 @@ export default function Home() {
               '& .MuiDrawer-paper': { 
                 width: DRAWER_WIDTH, 
                 boxSizing: 'border-box',
-                mt: '64px', // Height of the AppBar
-                height: 'calc(100% - 64px)' 
+                height: 'calc(100% - 1px)' 
               },
             }}
             anchor="right"
@@ -169,6 +168,7 @@ export default function Home() {
                           primary={city.name} 
                           secondary={city.nameArabic}
                         />
+                       
                       </ListItem>
                       
                       <Divider />
