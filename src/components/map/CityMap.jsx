@@ -303,7 +303,7 @@ const CityMap = ({ onCitySelect }) => {
         style={{ width: '100%', height: '100%' }}
         mapStyle={MAPBOX_STYLE}
         onMove={evt => setViewState(evt.viewState)}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
+        mapboxAccessToken={process.env.MAPBOX_ACCESS_TOKEN}
         interactiveLayerIds={['egypt-cities']}
         onMouseEnter={onMouseEnter}
         onMouseMove={onMouseMove}
